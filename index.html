@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Учебный помощник</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #6366f1, #9333ea);
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container { width: 100%; max-width: 480px; }
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      margin-bottom: 10px;
+    }
+    h1, h2, h3 { text-align: center; margin-top: 0; }
+    input, textarea, button { width: 100%; padding: 12px; margin-top: 10px; border-radius: 10px; border: 1px solid #ccc; font-size: 15px; }
+    textarea { resize: none; overflow-y: auto; }
+    button { background: #4f46e5; color: white; border: none; cursor: pointer; }
+    button.secondary { background: #e5e7eb; color: #111; }
+    .link { text-align:center; color:#4f46e5; cursor:pointer; margin-top:10px; }
+    ul { padding-left: 20px; list-style: none; }
+    li { background: #f3f4f6; padding: 8px; margin: 5px 0; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .hidden { display: none; }
+    .error { color: red; text-align: center; }
+    @media(max-width: 480px){ .container{padding:0 10px;} }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="card" id="loginCard">
+    <h1>📚 Учебный помощник</h1>
+    <input id="email" placeholder="Email (логин)" />
+    <input id="password" type="password" placeholder="Пароль" />
+    <input id="hint" placeholder="Подсказка для пароля" />
+    <button onclick="login()">Войти / Зарегистрироваться</button>
+    <div class="link" onclick="showHint()">Забыли пароль?</div>
+    <p id="error" class="error"></p>
+  </div>
+
+  <div class="card hidden" id="app">
+    <h2 id="welcome"></h2>
+
+    <h3>🗓 План на день</h3>
+    <input id="taskInput" placeholder="Новая задача" />
+    <button onclick="addTask()">Добавить</button>
+    <ul id="taskList"></ul>
+
+    <h3>✍️ Конспект</h3>
+    <textarea id="notes" rows="10" placeholder="Пиши конспект..." oninput="autoGrow(this)"></textarea>
+
+    <h3>🧠 Самопроверка</h3>
+    <textarea id="answer" rows="6" placeholder="Твой ответ..." oninput="autoGrow(this)"></textarea>
+
+    <button class="secondary" onclick="logout()">Выйти</button>
+  </div>
+</div>
+
+<script>
+  const loginCard = document.getElementById('loginCard');
+  const app = document.getElementById('app');
+  const welcome = document.getElementById('welcome');
+  const error = document.getElementById('error');
+  const taskList = document.getElementById('taskList');
+  let currentUser = null;
+
+  window.onload = () => {
+    const savedUser = localStorage.getItem('currentUser');
+    if(savedUser){ currentUser = savedUser; showApp(); loadData(); }
+  };
+
+  function login(){
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const hint = document.getElementById('hint').value.trim();
+    if(!email || !password){ error.textContent='Введите email и пароль'; return; }
+    const users = JSON.parse(localStorage.getItem('users')) || {};
+    if(users[email] && users[email].password!==password){ error.textContent='Неверный пароль'; return; }
+    users[email]={password,hint};
+    localStorage.setItem('users',JSON.stringify(users));
+    localStorage.setItem('currentUser',email);
+    currentUser=email; error.textContent=''; showApp(); loadData();
+  }
+
+  function showHint(){
+    const email = document.getElementById('email').value.trim();
+    const users = JSON.parse(localStorage.getItem('users')) || {};
+    if(!users[email]){ error.textContent='Пользователь не найден'; return; }
+    error.textContent='Подсказка: '+(users[email].hint||'нет подсказки');
+  }
+
+  function showApp(){ loginCard.classList.add('hidden'); app.classList.remove('hidden'); welcome.textContent='Привет, '+currentUser+' 👋'; }
+
+  function logout(){ localStorage.removeItem('currentUser'); location.reload(); }
+
+  function addTask(){
+    const input=document.getElementById('taskInput');
+    if(!input.value) return;
+    const data=getUserData();
+    data.tasks.push({text:input.value, id:Date.now(), done:false});
+    saveUserData(data); input.value=''; loadData();
+  }
+
+  function loadData(){
+    const data=getUserData();
+    taskList.innerHTML='';
+    data.tasks.forEach(t=>{
+      const li=document.createElement('li');
+      li.innerHTML=`<span style='text-decoration:${t.done?'line-through':'none'}'>${t.text}</span>
+        <div>
+          <button onclick='editTask(${t.id})'>✏️</button>
+          <button onclick='toggleDone(${t.id})'>✅</button>
+          <button onclick='deleteTask(${t.id})'>🗑️</button>
+        </div>`;
+      taskList.appendChild(li);
+    });
+    document.getElementById('notes').value=data.notes; autoGrow(document.getElementById('notes'));
+    document.getElementById('answer').value=data.answer; autoGrow(document.getElementById('answer'));
+  }
+
+  function editTask(id){
+    const data=getUserData();
+    const task=data.tasks.find(t=>t.id===id);
+    const newText=prompt('Редактировать задачу:',task.text);
+    if(newText){ task.text=newText; saveUserData(data); loadData(); }
+  }
+
+  function deleteTask(id){
+    const data=getUserData();
+    data.tasks=data.tasks.filter(t=>t.id!==id);
+    saveUserData(data); loadData();
+  }
+
+  function toggleDone(id){
+    const data=getUserData();
+    const task=data.tasks.find(t=>t.id===id);
+    task.done=!task.done; saveUserData(data); loadData();
+  }
+
+  function getUserData(){
+    const allData=JSON.parse(localStorage.getItem('data'))||{};
+    if(!allData[currentUser]) allData[currentUser]={tasks:[],notes:'',answer:''};
+    return allData[currentUser];
+  }
+
+  function saveUserData(update){
+    const allData=JSON.parse(localStorage.getItem('data'))||{};
+    allData[currentUser]=update;
+    localStorage.setItem('data',JSON.stringify(allData));
+  }
+
+  document.getElementById('notes').addEventListener('input',e=>{
+    const data=getUserData(); data.notes=e.target.value; saveUserData(data); autoGrow(e.target);
+  });
+  document.getElementById('answer').addEventListener('input',e=>{
+    const data=getUserData(); data.answer=e.target.value; saveUserData(data); autoGrow(e.target);
+  });
+
+  function autoGrow(textarea){ textarea.style.height='auto'; textarea.style.height=(textarea.scrollHeight)+'px'; }
+</script>
+</body>
+</html>
