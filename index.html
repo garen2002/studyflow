@@ -3,169 +3,120 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Учебный помощник</title>
+  
+  <!-- Вставьте сюда свой код Google Search Console -->
+  <meta name="google-site-verification" content="ВАШ_КОД_ИЗ_GOOGLE" />
+
+  <title>StudyFlow — учебный сайт</title>
+  <meta name="description" content="StudyFlow — учебный сайт для планирования задач, ведения конспектов и самопроверки. Работает офлайн и без регистрации.">
+  <meta name="keywords" content="учебный сайт, конспекты, планирование учебы, studyflow">
+  <meta name="author" content="Твое имя">
+
+  <link rel="manifest" href="manifest.json">
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #6366f1, #9333ea);
-      margin: 0;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .container { width: 100%; max-width: 480px; }
-    .card {
-      background: white;
-      border-radius: 16px;
-      padding: 24px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-      margin-bottom: 10px;
-    }
-    h1, h2, h3 { text-align: center; margin-top: 0; }
-    input, textarea, button { width: 100%; padding: 12px; margin-top: 10px; border-radius: 10px; border: 1px solid #ccc; font-size: 15px; }
-    textarea { resize: none; overflow-y: auto; }
-    button { background: #4f46e5; color: white; border: none; cursor: pointer; }
-    button.secondary { background: #e5e7eb; color: #111; }
-    .link { text-align:center; color:#4f46e5; cursor:pointer; margin-top:10px; }
-    ul { padding-left: 20px; list-style: none; }
-    li { background: #f3f4f6; padding: 8px; margin: 5px 0; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
-    .hidden { display: none; }
-    .error { color: red; text-align: center; }
-    @media(max-width: 480px){ .container{padding:0 10px;} }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }
+    header { background: #4A90E2; color: #fff; padding: 20px; text-align: center; }
+    main { padding: 20px; max-width: 800px; margin: auto; }
+    h2 { color: #333; }
+    textarea { width: 100%; height: 150px; margin-bottom: 10px; }
+    input, button { padding: 10px; margin: 5px 0; }
+    ul { list-style: none; padding: 0; }
+    li { background: #fff; margin: 5px 0; padding: 10px; border-radius: 5px; }
+    .task-done { text-decoration: line-through; color: #999; }
   </style>
 </head>
 <body>
-<div class="container">
-  <div class="card" id="loginCard">
-    <h1>📚 Учебный помощник</h1>
-    <input id="email" placeholder="Email (логин)" />
-    <input id="password" type="password" placeholder="Пароль" />
-    <input id="hint" placeholder="Подсказка для пароля" />
-    <button onclick="login()">Войти / Зарегистрироваться</button>
-    <div class="link" onclick="showHint()">Забыли пароль?</div>
-    <p id="error" class="error"></p>
-  </div>
+  <header>
+    <h1>StudyFlow</h1>
+    <p>Учебный сайт для конспектов и самопроверки</p>
+  </header>
 
-  <div class="card hidden" id="app">
-    <h2 id="welcome"></h2>
+  <main>
+    <h2>Конспект</h2>
+    <textarea id="notes" placeholder="Пиши свои заметки здесь..."></textarea>
+    <button onclick="saveNotes()">Сохранить заметки</button>
 
-    <h3>🗓 План на день</h3>
-    <input id="taskInput" placeholder="Новая задача" />
+    <h2>Задачи</h2>
+    <input type="text" id="taskInput" placeholder="Добавить новую задачу">
     <button onclick="addTask()">Добавить</button>
-    <ul id="taskList"></ul>
+    <ul id="tasksList"></ul>
 
-    <h3>✍️ Конспект</h3>
-    <textarea id="notes" rows="10" placeholder="Пиши конспект..." oninput="autoGrow(this)"></textarea>
+    <h2>Самопроверка</h2>
+    <textarea id="quizInput" placeholder="Напиши вопрос и ответ через |, например: Вопрос|Ответ"></textarea>
+    <button onclick="addQuiz()">Добавить вопрос</button>
+    <ul id="quizList"></ul>
+  </main>
 
-    <h3>🧠 Самопроверка</h3>
-    <textarea id="answer" rows="6" placeholder="Твой ответ..." oninput="autoGrow(this)"></textarea>
+  <script>
+    // ==== Заметки ====
+    const notesEl = document.getElementById('notes');
+    const savedNotes = localStorage.getItem('study_notes');
+    if(savedNotes) notesEl.value = savedNotes;
+    function saveNotes() {
+      localStorage.setItem('study_notes', notesEl.value);
+      alert('Заметки сохранены!');
+    }
 
-    <button class="secondary" onclick="logout()">Выйти</button>
-  </div>
-</div>
+    // ==== Задачи ====
+    const taskInput = document.getElementById('taskInput');
+    const tasksList = document.getElementById('tasksList');
+    let tasks = JSON.parse(localStorage.getItem('study_tasks') || '[]');
 
-<script>
-  const loginCard = document.getElementById('loginCard');
-  const app = document.getElementById('app');
-  const welcome = document.getElementById('welcome');
-  const error = document.getElementById('error');
-  const taskList = document.getElementById('taskList');
-  let currentUser = null;
+    function renderTasks() {
+      tasksList.innerHTML = '';
+      tasks.forEach((task, index) => {
+        const li = document.createElement('li');
+        li.textContent = task.text;
+        if(task.done) li.classList.add('task-done');
+        li.onclick = () => toggleTask(index);
+        tasksList.appendChild(li);
+      });
+    }
 
-  window.onload = () => {
-    const savedUser = localStorage.getItem('currentUser');
-    if(savedUser){ currentUser = savedUser; showApp(); loadData(); }
-  };
+    function addTask() {
+      if(taskInput.value.trim() === '') return;
+      tasks.push({ text: taskInput.value.trim(), done: false });
+      localStorage.setItem('study_tasks', JSON.stringify(tasks));
+      taskInput.value = '';
+      renderTasks();
+    }
 
-  function login(){
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value.trim();
-    const hint = document.getElementById('hint').value.trim();
-    if(!email || !password){ error.textContent='Введите email и пароль'; return; }
-    const users = JSON.parse(localStorage.getItem('users')) || {};
-    if(users[email] && users[email].password!==password){ error.textContent='Неверный пароль'; return; }
-    users[email]={password,hint};
-    localStorage.setItem('users',JSON.stringify(users));
-    localStorage.setItem('currentUser',email);
-    currentUser=email; error.textContent=''; showApp(); loadData();
-  }
+    function toggleTask(index) {
+      tasks[index].done = !tasks[index].done;
+      localStorage.setItem('study_tasks', JSON.stringify(tasks));
+      renderTasks();
+    }
 
-  function showHint(){
-    const email = document.getElementById('email').value.trim();
-    const users = JSON.parse(localStorage.getItem('users')) || {};
-    if(!users[email]){ error.textContent='Пользователь не найден'; return; }
-    error.textContent='Подсказка: '+(users[email].hint||'нет подсказки');
-  }
+    renderTasks();
 
-  function showApp(){ loginCard.classList.add('hidden'); app.classList.remove('hidden'); welcome.textContent='Привет, '+currentUser+' 👋'; }
+    // ==== Самопроверка ====
+    const quizInput = document.getElementById('quizInput');
+    const quizList = document.getElementById('quizList');
+    let quiz = JSON.parse(localStorage.getItem('study_quiz') || '[]');
 
-  function logout(){ localStorage.removeItem('currentUser'); location.reload(); }
+    function renderQuiz() {
+      quizList.innerHTML = '';
+      quiz.forEach((q, i) => {
+        const li = document.createElement('li');
+        li.textContent = `${q.question} ? `;
+        const btn = document.createElement('button');
+        btn.textContent = 'Показать ответ';
+        btn.onclick = () => alert(q.answer);
+        li.appendChild(btn);
+        quizList.appendChild(li);
+      });
+    }
 
-  function addTask(){
-    const input=document.getElementById('taskInput');
-    if(!input.value) return;
-    const data=getUserData();
-    data.tasks.push({text:input.value, id:Date.now(), done:false});
-    saveUserData(data); input.value=''; loadData();
-  }
+    function addQuiz() {
+      if(quizInput.value.trim() === '' || !quizInput.value.includes('|')) return alert('Неверный формат. Введите: Вопрос|Ответ');
+      const parts = quizInput.value.split('|');
+      quiz.push({ question: parts[0].trim(), answer: parts[1].trim() });
+      localStorage.setItem('study_quiz', JSON.stringify(quiz));
+      quizInput.value = '';
+      renderQuiz();
+    }
 
-  function loadData(){
-    const data=getUserData();
-    taskList.innerHTML='';
-    data.tasks.forEach(t=>{
-      const li=document.createElement('li');
-      li.innerHTML=`<span style='text-decoration:${t.done?'line-through':'none'}'>${t.text}</span>
-        <div>
-          <button onclick='editTask(${t.id})'>✏️</button>
-          <button onclick='toggleDone(${t.id})'>✅</button>
-          <button onclick='deleteTask(${t.id})'>🗑️</button>
-        </div>`;
-      taskList.appendChild(li);
-    });
-    document.getElementById('notes').value=data.notes; autoGrow(document.getElementById('notes'));
-    document.getElementById('answer').value=data.answer; autoGrow(document.getElementById('answer'));
-  }
-
-  function editTask(id){
-    const data=getUserData();
-    const task=data.tasks.find(t=>t.id===id);
-    const newText=prompt('Редактировать задачу:',task.text);
-    if(newText){ task.text=newText; saveUserData(data); loadData(); }
-  }
-
-  function deleteTask(id){
-    const data=getUserData();
-    data.tasks=data.tasks.filter(t=>t.id!==id);
-    saveUserData(data); loadData();
-  }
-
-  function toggleDone(id){
-    const data=getUserData();
-    const task=data.tasks.find(t=>t.id===id);
-    task.done=!task.done; saveUserData(data); loadData();
-  }
-
-  function getUserData(){
-    const allData=JSON.parse(localStorage.getItem('data'))||{};
-    if(!allData[currentUser]) allData[currentUser]={tasks:[],notes:'',answer:''};
-    return allData[currentUser];
-  }
-
-  function saveUserData(update){
-    const allData=JSON.parse(localStorage.getItem('data'))||{};
-    allData[currentUser]=update;
-    localStorage.setItem('data',JSON.stringify(allData));
-  }
-
-  document.getElementById('notes').addEventListener('input',e=>{
-    const data=getUserData(); data.notes=e.target.value; saveUserData(data); autoGrow(e.target);
-  });
-  document.getElementById('answer').addEventListener('input',e=>{
-    const data=getUserData(); data.answer=e.target.value; saveUserData(data); autoGrow(e.target);
-  });
-
-  function autoGrow(textarea){ textarea.style.height='auto'; textarea.style.height=(textarea.scrollHeight)+'px'; }
-</script>
+    renderQuiz();
+  </script>
 </body>
 </html>

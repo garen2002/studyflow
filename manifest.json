@@ -1,10 +1,10 @@
 {
-  "name": "Учебный помощник",
-  "short_name": "Учеба",
+  "name": "StudyFlow",
+  "short_name": "StudyFlow",
   "start_url": "index.html",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#4f46e5",
+  "background_color": "#f5f5f5",
+  "theme_color": "#4A90E2",
   "icons": [
     {
       "src": "icon-192.png",
